@@ -152,6 +152,36 @@ def editar_usuario(id):
         db.session.commit(); return redirect(url_for('listar_usuarios'))
     return render_template('editar_usuario.html', u=u)
 
+# --- Bloco de Auto-Setup para o Render ---
+def inicializar_usuarios():
+    usuarios_fixos = [
+        {"nome": "André", "email": "andre.oliveira@mic.ind.br", "perfil": "gerente"},
+        {"nome": "Eloah", "email": "eloah@mic.ind.br", "perfil": "gerente"},
+        {"nome": "Andrea Financeiro", "email": "andrea.santos@mic.ind.br", "perfil": "financeiro"},
+        {"nome": "Marinete", "email": "marinete.goncalves@mic.ind.br", "perfil": "conferente"},
+        {"nome": "Renata", "email": "renata.caetano@mic.ind.br", "perfil": "vendedor"},
+        {"nome": "Luan", "email": "luan.costa@mic.ind.br", "perfil": "vendedor"},
+        {"nome": "Talita", "email": "talita.stevanelli@mic.ind.br", "perfil": "vendedor"},
+        {"nome": "Kevilly", "email": "kevvilly.dantas@mic.ind.br", "perfil": "vendedor"},
+        {"nome": "Viviane", "email": "viviane.santos@mic.ind.br", "perfil": "vendedor"},
+        {"nome": "Francielle", "email": "francielle.oliveira@mic.ind.br", "perfil": "vendedor"}
+    ]
+
+    with app.app_context():
+        db.create_all()  # Cria o banco e as colunas novas se não existirem
+        
+        for dado in usuarios_fixos:
+            # Só cria se o e-mail não existir no banco
+            if not Usuario.query.filter_by(email=dado["email"]).first():
+                novo_u = Usuario(nome=dado["nome"], email=dado["email"], perfil=dado["perfil"])
+                novo_u.set_senha("Mic@2026")
+                db.session.add(novo_u)
+        
+        db.session.commit()
+        print(">>> Sistema MIC: Usuários verificados/criados com sucesso!")
+
+# --- Inicialização do Servidor ---
 if __name__ == "__main__":
+    inicializar_usuarios() # Roda a criação de usuários ANTES do site subir
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
