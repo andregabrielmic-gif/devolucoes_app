@@ -169,12 +169,17 @@ def receber_mercadoria(id):
     db.session.commit()
     return redirect(url_for('dashboard'))
 
-@app.route('/baixar_boleto/<int:id>')
+@app.route('/baixar_boleto/<int:id>', methods=['POST'])
+@login_required
 @roles_required('financeiro')
 def baixar_boleto(id):
     d = Devolucao.query.get_or_404(id)
-    d.status, d.baixado_por, d.data_baixa = "finalizado_pago", session['nome'], agora_brasilia()
-    db.session.commit(); return redirect(url_for('dashboard'))
+    d.status = "finalizado_pago"
+    d.baixado_por = session['nome']
+    d.data_baixa = agora_brasilia()
+    d.obs_baixa = request.form.get('obs_baixa', '').strip()
+    db.session.commit()
+    return redirect(url_for('dashboard'))
 
 
 @app.route('/editar/<int:id>', methods=['GET', 'POST'])

@@ -133,6 +133,9 @@
                     {% if d.status == 'finalizado_pago' %}
                     <span style="color: #27ae60;">💰 <b>Baixa Financeiro:</b> {{ d.baixado_por or '--' }}</span>
                     <span style="text-align: right; color: #27ae60;">🕒 {{ d.data_baixa.strftime('%d/%m/%Y %H:%M') if d.data_baixa else '--' }}</span>
+                    {% if d.obs_baixa %}
+                    <span style="color: #7f8c8d; grid-column: 1 / -1;">📝 <b>Obs. Financeiro:</b> {{ d.obs_baixa }}</span>
+                    {% endif %}
                     {% endif %}
                 </div>
             </div>
@@ -154,7 +157,13 @@
                         <a href="{{ url_for('dar_entrada_fiscal', id=d.id) }}" class="btn btn-success" style="background: #16a085; border-color: #1a8a72;">📋 Dar Entrada no Sistema Interno</a>
 
                     {% elif session['perfil'] == 'financeiro' and d.status == 'entregue_fiscal' %}
-                        <a href="{{ url_for('baixar_boleto', id=d.id) }}" class="btn btn-success" style="background: #27ae60; border-color: #219150;">💰 Dar Baixa Final no Boleto</a>
+                        <form method="POST" action="{{ url_for('baixar_boleto', id=d.id) }}" style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+                            <input type="text" name="obs_baixa" placeholder="Observação (ex: abatimento dado na NF 12345)"
+                                   style="padding: 10px; border: 1px solid #8e44ad; border-radius: 6px; font-size: 13px; width: 100%; box-sizing: border-box;">
+                            <button type="submit" class="btn btn-success" style="background: #27ae60; border-color: #219150; align-self: flex-start;">
+                                💰 Dar Baixa Final no Boleto
+                            </button>
+                        </form>
                     {% endif %}
                 </div>
 
