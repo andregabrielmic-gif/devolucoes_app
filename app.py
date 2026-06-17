@@ -189,7 +189,7 @@ def editar_devolucao(id):
         return redirect(url_for('dashboard'))
 
     if d.status != 'aguardando_conferencia':
-        flash("Esta devolução não pode mais ser editada. Só é possível editar antes do conferente dar o OK.")
+        flash("Esta devolução não pode mais ser editada pois já passou da etapa de validação.")
         return redirect(url_for('dashboard'))
 
     if request.method == 'POST':
