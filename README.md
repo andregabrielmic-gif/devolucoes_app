@@ -1,154 +1,117 @@
-# 📦 Sistema de Devoluções — MIC
+# 📦 Returns Management System
 
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Flask](https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white)
-![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-CC2927?style=for-the-badge&logo=databricks&logoColor=white)
-![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
-![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
-![Status](https://img.shields.io/badge/Status-Em%20Produção-brightgreen?style=for-the-badge)
+[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Flask](https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-CC2927?style=for-the-badge&logo=databricks&logoColor=white)](https://www.sqlalchemy.org/)
+[![Status](https://img.shields.io/badge/Status-Live%20in%20Production-brightgreen?style=for-the-badge)](https://andredevolucoes.pythonanywhere.com/)
 
-> Sistema web desenvolvido para gerenciar o fluxo completo de devoluções de mercadorias, desde o lançamento pelo vendedor até a finalização pelo financeiro — com controle de acesso por perfil, upload de notas fiscais e geração de relatórios em PDF.
+> A full-featured web application for managing product return flows — from the initial request by a sales rep to final settlement by the finance team. Built with role-based access control, PDF invoice uploads, and automated status tracking.
 
-🌐 **[Acesse o sistema em produção](https://andredevolucoes.pythonanywhere.com/)**
+🌐 **[Live Demo](https://andredevolucoes.pythonanywhere.com/)**
 
 ---
 
-## 🖥️ Screenshots
+## 🚀 Features
 
-<table>
-  <tr>
-    <td align="center"><b>Tela de Login</b></td>
-    <td align="center"><b>Dashboard — Vendedor</b></td>
-  </tr>
-  <tr>
-    <td><img src="./screenshots/login.PNG" alt="Login" width="400"/></td>
-    <td><img src="./screenshots/dashboard-vendedor.png" alt="Dashboard Vendedor" width="400"/></td>
-  </tr>
-  <tr>
-    <td align="center"><b>Nova Devolução</b></td>
-    <td align="center"><b>Dashboard — Gerente</b></td>
-  </tr>
-  <tr>
-    <td><img src="./screenshots/nova-devolucao.png" alt="Nova Devolução" width="400"/></td>
-    <td><img src="./screenshots/dashboard-gerente.png" alt="Dashboard Gerente" width="400"/></td>
-  </tr>
-  <tr>
-    <td align="center"><b>Gestão de Usuários</b></td>
-    <td align="center"><b>Geração de Relatório PDF</b></td>
-  </tr>
-  <tr>
-    <td><img src="./screenshots/usuarios.png" alt="Usuários" width="400"/></td>
-    <td><img src="./screenshots/relatorio.png" alt="Relatório" width="400"/></td>
-  </tr>
-</table>
+- 🔐 **Authentication** with session management
+- 👥 **Role-based access control**: Salesperson, Inspector, Manager, and Finance
+- 📋 **Full return workflow** with trackable stages:
+  `Awaiting Validation` → `Awaiting Approval` → `Awaiting Arrival` → `Awaiting Payment Settlement` → `Completed`
+- 📎 **PDF invoice upload** linked to each return record
+- 🔍 **Search and filters** by customer, customer invoice number, and internal invoice number
+- 📊 **PDF report generation** by date range (Manager only)
+- ✏️ **Edit returns** while still in the initial stage
+- 🕐 **Timestamps and responsible user logged** at each workflow stage
 
 ---
 
-## 🚀 Funcionalidades
+## 🛠️ Tech Stack
 
-- 🔐 **Autenticação** com login e controle de sessão
-- 👥 **Controle de acesso por perfil**: Vendedor, Conferente, Gerente e Financeiro
-- 📋 **Fluxo completo de devolução** com etapas rastreáveis:
-  - `Aguardando Validação` → `Aguardando Aprovação` → `Aguardando Chegada` → `Aguardando Baixa no Boleto` → `Finalizado`
-- 📎 **Upload de notas fiscais em PDF** vinculadas à devolução
-- 🔍 **Busca e filtros** por cliente, NF do cliente e NF interna
-- 📊 **Geração de relatório em PDF** por período (exclusivo para gerentes)
-- ✏️ **Edição de devoluções** enquanto ainda estão na etapa inicial
-- 🕐 **Registro de datas e responsáveis** em cada etapa do fluxo
+| Technology | Purpose |
+|---|---|
+| Python + Flask | Backend framework |
+| SQLAlchemy | ORM / database management |
+| SQLite | Database |
+| ReportLab | PDF report generation |
+| Werkzeug | Password hashing & file uploads |
+| Jinja2 | HTML templating |
+| PythonAnywhere | Cloud hosting |
 
 ---
 
-## 🏗️ Estrutura do Projeto
+## 🔄 Workflow
 
 ```
-devolucoes_app/
-├── app.py              # Rotas e lógica principal da aplicação
-├── models.py           # Modelos do banco de dados (Usuario, Devolucao, DevolucaoPDF)
-├── config.py           # Configurações da aplicação
-├── Procfile            # Configuração para deploy
-├── requirements.txt    # Dependências do projeto
-├── static/             # Arquivos estáticos (CSS, uploads)
-├── screenshots/        # Screenshots do sistema
-└── templates/          # Templates HTML (Jinja2)
+New Return (Salesperson)
+        ↓
+Awaiting Validation (Inspector)
+        ↓
+Awaiting Approval (Manager)
+        ↓
+Awaiting Arrival (Manager)
+        ↓
+Awaiting Payment Settlement (Salesperson / Inspector)
+        ↓
+Completed (Finance)
 ```
 
 ---
 
-## ⚙️ Como rodar localmente
+## 👤 User Roles
 
-### Pré-requisitos
+| Role | Permissions |
+|---|---|
+| **Salesperson** | Submit returns, track status, confirm receipt |
+| **Inspector** | Validate submitted returns |
+| **Manager** | Approve shipments, manage users, generate PDF reports |
+| **Finance** | Settle payments and finalize the process |
 
-- Python 3.10+
-- pip
+---
 
-### Instalação
+## ⚙️ Running Locally
 
 ```bash
-# Clone o repositório
+# Clone the repository
 git clone https://github.com/andregabriel-dev/devolucoes_app.git
 cd devolucoes_app
 
-# Crie e ative o ambiente virtual
+# Create and activate virtual environment
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
 venv\Scripts\activate     # Windows
 
-# Instale as dependências
+# Install dependencies
 pip install -r requirements.txt
 
-# Inicie a aplicação
+# Start the application
 python app.py
 ```
 
-Acesse em: `http://localhost:5000`
+Access at: `http://localhost:5000`
 
-> Na primeira execução, o sistema cria automaticamente o banco de dados e os usuários padrão.
-
----
-
-## 👤 Perfis de Acesso
-
-| Perfil | Permissões |
-|--------|-----------|
-| **Vendedor** | Lança novas devoluções, acompanha status, recebe mercadorias |
-| **Conferente** | Confere e valida as devoluções lançadas |
-| **Gerente** | Aprova envios, gerencia usuários, gera relatórios em PDF |
-| **Financeiro** | Realiza a baixa do boleto e finaliza o processo |
+> On first run, the system automatically creates the database and default users.
 
 ---
 
-## 🔄 Fluxo de Status
+## 📁 Project Structure
 
 ```
-Nova Devolução (Vendedor)
-        ↓
-Aguardando Validação
-        ↓
-Aguardando Aprovação (Conferente)
-        ↓
-Aguardando Chegada (Gerente)
-        ↓
-Aguardando Baixa no Boleto (Vendedor/Conferente)
-        ↓
-Finalizado (Financeiro)
+devolucoes_app/
+├── app.py              # Main routes and application logic
+├── models.py           # Database models (User, Return, ReturnPDF)
+├── config.py           # Application configuration
+├── Procfile            # Deployment configuration
+├── requirements.txt    # Project dependencies
+├── static/             # Static files (CSS, uploads)
+├── screenshots/        # Application screenshots
+└── templates/          # Jinja2 HTML templates
 ```
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+## 👨‍💻 Author
 
-- **[Flask](https://flask.palletsprojects.com/)** — Framework web
-- **[SQLAlchemy](https://www.sqlalchemy.org/)** — ORM para banco de dados
-- **[ReportLab](https://www.reportlab.com/)** — Geração de relatórios em PDF
-- **[Werkzeug](https://werkzeug.palletsprojects.com/)** — Segurança de senhas e upload de arquivos
-- **[PythonAnywhere](https://www.pythonanywhere.com/)** — Hospedagem em produção
-- **Jinja2** — Templates HTML dinâmicos
-
----
-
-## 👨‍💻 Autor
-
-Desenvolvido por **André Gabriel**
+Developed by **André Gabriel**
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/andré-gabriel-6a2333208/)
 [![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/andregabriel-dev)
