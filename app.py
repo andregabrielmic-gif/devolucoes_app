@@ -113,7 +113,7 @@ def dashboard():
     query = Devolucao.query
 
     if session.get('perfil') == 'vendedor':
-    query = query.filter(Devolucao.vendedor_id == session['user_id'])
+        query = query.filter(Devolucao.vendedor_id == session['user_id'])
 
     if busca:
         query = query.filter(
