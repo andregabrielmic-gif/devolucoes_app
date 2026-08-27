@@ -89,8 +89,10 @@ def alterar_senha_obrigatoria():
             return render_template('alterar_senha.html')
             
         user.set_senha(nova_senha)
-        user.primeiro_login = False # Desativa o bloqueio de primeiro login
+        user.primeiro_login = False
         db.session.commit()
+        flash("Senha alterada com sucesso!")
+        return redirect(url_for('dashboard'))  # ou a rota principal do seu app
         
         flash("Senha alterada com sucesso!")
         return redirect(url_for('dashboard'))
