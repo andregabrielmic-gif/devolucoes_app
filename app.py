@@ -112,8 +112,8 @@ def dashboard():
 
     query = Devolucao.query
 
-    if session['perfil'] == 'vendedor':
-        query = query.filter(Devolucao.vendedor_id == session['user_id'])
+    if session.get('perfil') == 'vendedor':
+    query = query.filter(Devolucao.vendedor_id == session['user_id'])
 
     if busca:
         query = query.filter(
@@ -136,7 +136,7 @@ def dashboard():
         (Devolucao.status == 'finalizado_pago', 6),
         else_=6
     )
-    devolucoes = query.order_by(ordem_status, Devolucao.data_criacao.desc()).all()
+    devolucoes = query.order_by(Devolucao.data_criacao.desc()).all()
 
     return render_template('dashboard.html', devolucoes=devolucoes, busca=busca, status_filtro=status_filtro)
 
