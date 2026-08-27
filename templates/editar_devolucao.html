@@ -1,50 +1,114 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="card" style="max-width: 600px; margin: 20px auto;">
+<div class="card" style="max-width: 600px; margin: 20px auto; padding: 20px;">
     <h2>✏️ Editar Devolução #{{ d.id }}</h2>
     <hr>
 
     <form method="POST" enctype="multipart/form-data">
 
         <label>Cliente:</label>
-        <input type="text" name="cliente" value="{{ d.cliente }}" required>
+        <input type="text" name="cliente" value="{{ d.cliente }}" required class="form-control mb-2">
 
         <label>NF do Cliente:</label>
-        <input type="text" name="nf_cliente" value="{{ d.nf_cliente or '' }}" required>
+        <input type="text" name="nf_cliente" value="{{ d.nf_cliente or '' }}" required class="form-control mb-2">
 
         <label>Nossa NF:</label>
-        <input type="text" name="nf_interna" value="{{ d.nf_interna or '' }}" required>
+        <input type="text" name="nf_interna" value="{{ d.nf_interna or '' }}" required class="form-control mb-2">
 
         <label>Valor:</label>
-        <input type="number" step="0.01" name="valor" value="{{ d.valor }}" required>
+        <input type="number" step="0.01" name="valor" value="{{ d.valor }}" required class="form-control mb-2">
 
         <label>Motivo:</label>
-        <textarea name="motivo">{{ d.motivo }}</textarea>
+        <textarea name="motivo" class="form-control mb-2">{{ d.motivo }}</textarea>
 
+        <!-- PDFs já salvos no banco -->
         {% if d.pdfs %}
         <div style="margin: 15px 0; padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0;">
-            <label style="margin-bottom: 8px; display: block;">PDFs atuais:</label>
+            <label style="margin-bottom: 8px; display: block; font-weight: bold;">PDFs Atuais (Salvos):</label>
             {% for pdf in d.pdfs %}
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
-                    <a href="{{ url_for('static', filename='uploads/' + pdf.nome_arquivo) }}" target="_blank" class="btn btn-small">📄 PDF {{ loop.index }}</a>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; background: #fff; padding: 5px 10px; border-radius: 4px; border: 1px solid #ddd;">
+                    <a href="{{ url_for('static', filename='uploads/' + pdf.nome_arquivo) }}" target="_blank" style="font-size: 13px;">📄 {{ pdf.nome_arquivo }}</a>
                     <label style="display: flex; align-items: center; gap: 5px; font-size: 13px; color: #c0392b; cursor: pointer; margin: 0;">
-                        <input type="checkbox" name="remover_pdf" value="{{ pdf.id }}"> Remover este PDF
+                        <input type="checkbox" name="remover_pdf" value="{{ pdf.id }}"> Excluir
                     </label>
                 </div>
             {% endfor %}
         </div>
         {% endif %}
 
-        <label>Adicionar novos PDFs:</label>
-        <input type="file" name="pdf_notas" multiple accept="application/pdf">
-        <small style="color: #666;">Segure Ctrl (ou Cmd no Mac) para selecionar múltiplos arquivos</small>
+        <!-- Adicionar novos PDFs de forma acumulativa -->
+        <div style="margin: 15px 0; padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0;">
+            <label style="margin-bottom: 8px; display: block; font-weight: bold;">Adicionar Novos PDFs:</label>
+            <input type="file" id="input-arquivo-edit" accept="application/pdf" style="display: none;" onchange="adicionarArquivoEdit(this)">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('input-arquivo-edit').click()">📁 Selecionar Nota PDF</button>
+            
+            <p style="margin: 10px 0 5px 0; font-size: 13px; color: #666;">Novos arquivos na fila:</p>
+            <ul id="lista-arquivos-edit" style="list-style: none; padding: 0; margin: 0;">
+                <li id="nenhum-arquivo-edit" style="color: #999; font-style: italic; font-size: 13px;">Nenhum novo arquivo selecionado.</li>
+            </ul>
+            <!-- Input real enviado ao Flask -->
+            <input type="file" name="pdf_notas" id="pdf_notas_real_edit" style="display: none;" multiple>
+        </div>
 
         <div style="margin-top: 20px; display: flex; gap: 10px;">
             <button type="submit" class="btn btn-success" style="flex: 1;">💾 Salvar Alterações</button>
-            <a href="{{ url_for('dashboard') }}" class="btn" style="background: #95a5a6; color: white; flex: 1; text-align: center;">Cancelar</a>
+            <a href="{{ url_for('dashboard') }}" class="btn" style="background: #95a5a6; color: white; flex: 1; text-align: center; text-decoration: none; padding: 8px;">Cancelar</a>
         </div>
     </form>
 </div>
 
+<script>
+    let dtGlobalEdit = new DataTransfer();
+
+    function adicionarArquivoEdit(input) {
+        if (input.files.length > 0) {
+            let file = input.files[0];
+            dtGlobalEdit.items.add(file);
+            document.getElementById('pdf_notas_real_edit').files = dtGlobalEdit.files;
+            atualizarListaVisualEdit();
+        }
+        input.value = '';
+    }
+
+    function removerArquivoEdit(index) {
+        let dtNova = new DataTransfer();
+        for (let i = 0; i < dtGlobalEdit.files.length; i++) {
+            if (i !== index) {
+                dtNova.items.add(dtGlobalEdit.files[i]);
+            }
+        }
+        dtGlobalEdit = dtNova;
+        document.getElementById('pdf_notas_real_edit').files = dtGlobalEdit.files;
+        atualizarListaVisualEdit();
+    }
+
+    function atualizarListaVisualEdit() {
+        let lista = document.getElementById('lista-arquivos-edit');
+        lista.innerHTML = '';
+
+        if (dtGlobalEdit.files.length === 0) {
+            lista.innerHTML = '<li id="nenhum-arquivo-edit" style="color: #999; font-style: italic; font-size: 13px;">Nenhum novo arquivo selecionado.</li>';
+            return;
+        }
+
+        for (let i = 0; i < dtGlobalEdit.files.length; i++) {
+            let li = document.createElement('li');
+            li.style.display = 'flex';
+            li.style.justifyContent = 'space-between';
+            li.style.alignItems = 'center';
+            li.style.background = '#fff';
+            li.style.padding = '6px 10px';
+            li.style.marginBottom = '5px';
+            li.style.borderRadius = '4px';
+            li.style.border = '1px solid #ccc';
+            
+            li.innerHTML = `
+                <span style="font-size: 13px;">📄 ${dtGlobalEdit.files[i].name}</span>
+                <button type="button" class="btn btn-danger btn-sm" style="padding: 2px 8px; font-size: 12px; background: #c0392b; color: #fff; border: none; border-radius: 3px; cursor: pointer;" onclick="removerArquivoEdit(${i})">Excluir</button>
+            `;
+            lista.appendChild(li);
+        }
+    }
+</script>
 {% endblock %}

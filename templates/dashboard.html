@@ -4,7 +4,7 @@
 <div style="margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
     <p style="margin: 0; color: #555;">Olá, <b>{{ session['nome'] }}</b> <span style="font-size: 12px; background: #eee; padding: 2px 8px; border-radius: 10px;">{{ session['perfil'].upper() }}</span></p>
     <div style="margin-top: 10px;">
-        {% if session['perfil'] in ['vendedor', 'conferente', 'gerente'] %}
+        {% if session['perfil'] in ['vendedor', 'gerente'] %}
             <a href="{{ url_for('nova_devolucao') }}" class="btn btn-success" style="padding: 8px 15px;">➕ Nova Devolução</a>
         {% endif %}
         {% if session['perfil'] == 'gerente' %}
@@ -18,12 +18,12 @@
 <div style="margin-bottom: 15px; display: flex; gap: 8px; flex-wrap: wrap;">
     {% set filtros = [
         ('', '📋 Todos', '#2c3e50', '#eee', '#555'),
-        ('aguardando_conferencia', '🔍 Aguardando Validação', '#e67e22', '#fff3e0', '#e67e22'),
+        ('aguardando_validacao', '🔍 Aguardando Validação', '#e67e22', '#fff3e0', '#e67e22'),
         ('aguardando_aprovacao', '🛡️ Aguardando Aprovação', '#3498db', '#ebf5fb', '#3498db'),
-        ('em_transito', '🚚 Aguardando Chegada', '#f39c12', '#fef9e7', '#f39c12'),
+        ('em_transito', '🚚 Em Trânsito', '#f39c12', '#fef9e7', '#f39c12'),
         ('aguardando_fiscal', '📋 Aguardando Fiscal', '#16a085', '#e8f8f5', '#16a085'),
-        ('entregue_fiscal', '💼 Aguardando Baixa no Boleto', '#8e44ad', '#f5eef8', '#8e44ad'),
-        ('finalizado_pago', '✅ Finalizados', '#27ae60', '#eafaf1', '#27ae60')
+        ('entregue_financeiro', '💼 Entregue ao Financeiro', '#8e44ad', '#f5eef8', '#8e44ad'),
+        ('finalizado_pago', '✅ Finalizado Pago', '#27ae60', '#eafaf1', '#27ae60')
     ] %}
     {% for valor, label, cor_ativa, cor_inativa, cor_texto_inativo in filtros %}
         {% if status_filtro == valor %}
@@ -63,7 +63,7 @@
 {% if devolucoes %}
     {% for d in devolucoes %}
 
-        {% if d.status == 'aguardando_conferencia' %}
+        {% if d.status == 'aguardando_validacao' %}
             {% set card_cor = '#e67e22' %}
             {% set card_bg = '#fffaf5' %}
         {% elif d.status == 'aguardando_aprovacao' %}
@@ -75,7 +75,7 @@
         {% elif d.status == 'aguardando_fiscal' %}
             {% set card_cor = '#16a085' %}
             {% set card_bg = '#e8f8f5' %}
-        {% elif d.status == 'entregue_fiscal' %}
+        {% elif d.status == 'entregue_financeiro' %}
             {% set card_cor = '#8e44ad' %}
             {% set card_bg = '#fdf5ff' %}
         {% elif d.status == 'finalizado_pago' %}
@@ -116,26 +116,23 @@
 
             <div style="font-size:12px; color:#555; background:#fcfcfc; padding:12px; border-radius:8px; border: 1px solid #eee; border-left: 4px solid {{ card_cor }};">
                 <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 8px;">
-                    <span>✅ <b>Conferência:</b> {{ d.conferido_por or '--' }}</span>
-                    <span style="text-align: right;">🕒 {{ d.data_conferencia.strftime('%d/%m/%Y %H:%M') if d.data_conferencia else '--' }}</span>
+                    <span>✅ <b>Validação Fiscal:</b> {{ d.validado_por or '--' }}</span>
+                    <span style="text-align: right;">🕒 {{ d.data_validacao.strftime('%d/%m/%Y %H:%M') if d.data_validacao else '--' }}</span>
 
                     <span>🛡️ <b>Aprovação Gerente:</b> {{ d.aprovado_por or '--' }}</span>
                     <span style="text-align: right;">🕒 {{ d.data_aprovacao.strftime('%d/%m/%Y %H:%M') if d.data_aprovacao else '--' }}</span>
 
-                    <span>📦 <b>Recebido por:</b> {{ d.recebido_por or '--' }}</span>
+                    <span>📦 <b>Recebido por (Vendedor):</b> {{ d.recebido_por or '--' }}</span>
                     <span style="text-align: right;">🕒 {{ d.data_recebimento.strftime('%d/%m/%Y %H:%M') if d.data_recebimento else '--' }}</span>
 
-                    {% if d.entrada_fiscal_por is defined and d.entrada_fiscal_por %}
-                    <span>📋 <b>Entrada Fiscal:</b> {{ d.entrada_fiscal_por }}</span>
+                    <span>📋 <b>Entrada Fiscal:</b> {{ d.entrada_fiscal_por or '--' }}</span>
                     <span style="text-align: right;">🕒 {{ d.data_entrada_fiscal.strftime('%d/%m/%Y %H:%M') if d.data_entrada_fiscal else '--' }}</span>
-                    {% endif %}
 
-                    {% if d.status == 'finalizado_pago' %}
-                    <span style="color: #27ae60;">💰 <b>Baixa Financeiro:</b> {{ d.baixado_por or '--' }}</span>
-                    <span style="text-align: right; color: #27ae60;">🕒 {{ d.data_baixa.strftime('%d/%m/%Y %H:%M') if d.data_baixa else '--' }}</span>
+                    <span style="color: {% if d.status == 'finalizado_pago' %}#27ae60{% else %}#555{% endif %};">💰 <b>Baixa Financeiro:</b> {{ d.baixado_por or '--' }}</span>
+                    <span style="text-align: right; color: {% if d.status == 'finalizado_pago' %}#27ae60{% else %}#555{% endif %};">🕒 {{ d.data_baixa.strftime('%d/%m/%Y %H:%M') if d.data_baixa else '--' }}</span>
+
                     {% if d.obs_baixa %}
                     <span style="color: #7f8c8d; grid-column: 1 / -1;">📝 <b>Obs. Financeiro:</b> {{ d.obs_baixa }}</span>
-                    {% endif %}
                     {% endif %}
                 </div>
             </div>
@@ -144,31 +141,31 @@
             <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
 
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    {% if session['perfil'] in ['conferente', 'gerente'] and d.status == 'aguardando_conferencia' %}
-                        <a href="{{ url_for('conferir_nota', id=d.id) }}" class="btn btn-success">✔️ Validar Nota Fiscal</a>
+                    {% if session['perfil'] in ['fiscal', 'gerente'] and d.status == 'aguardando_validacao' %}
+                        <a href="{{ url_for('validar_nota', id=d.id) }}" class="btn btn-success">✔️ Validar Nota Fiscal</a>
 
                     {% elif session['perfil'] == 'gerente' and d.status == 'aguardando_aprovacao' %}
-                        <a href="{{ url_for('aprovar_envio', id=d.id) }}" class="btn btn-success" style="background: #3498db; border-color: #2980b9;">🚀 Autorizar Envio (Aprovar)</a>
+                        <a href="{{ url_for('aprovar_envio', id=d.id) }}" class="btn btn-success" style="background: #3498db; border-color: #2980b9;">🚀 Aprovar Envio</a>
 
-                    {% elif session['perfil'] in ['vendedor', 'conferente', 'gerente'] and d.status == 'em_transito' %}
-                        <a href="{{ url_for('receber_mercadoria', id=d.id) }}" class="btn btn-success" style="background: #f39c12; border-color: #e67e22;">📦 Confirmar Chegada / Entregar Fiscal</a>
+                    {% elif session['perfil'] in ['vendedor', 'gerente'] and d.status == 'em_transito' %}
+                        <a href="{{ url_for('receber_mercadoria', id=d.id) }}" class="btn btn-success" style="background: #f39c12; border-color: #e67e22;">📦 Confirmar Chegada</a>
 
-                    {% elif session['perfil'] == 'fiscal' and d.status == 'aguardando_fiscal' %}
-                        <a href="{{ url_for('dar_entrada_fiscal', id=d.id) }}" class="btn btn-success" style="background: #16a085; border-color: #1a8a72;">📋 Dar Entrada no Sistema Interno</a>
+                    {% elif session['perfil'] in ['fiscal', 'gerente'] and d.status == 'aguardando_fiscal' %}
+                        <a href="{{ url_for('dar_entrada_fiscal', id=d.id) }}" class="btn btn-success" style="background: #16a085; border-color: #1a8a72;">📋 Dar Entrada no Sistema</a>
 
-                    {% elif session['perfil'] == 'financeiro' and d.status == 'entregue_fiscal' %}
+                    {% elif session['perfil'] == 'financeiro' and d.status == 'entregue_financeiro' %}
                         <form method="POST" action="{{ url_for('baixar_boleto', id=d.id) }}" style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
                             <input type="text" name="obs_baixa" placeholder="Observação (ex: abatimento dado na NF 12345)"
                                    style="padding: 10px; border: 1px solid #8e44ad; border-radius: 6px; font-size: 13px; width: 100%; box-sizing: border-box;">
                             <button type="submit" class="btn btn-success" style="background: #27ae60; border-color: #219150; align-self: flex-start;">
-                                💰 Dar Baixa Final no Boleto
+                                💰 Dar Baixa Final (Finalizado Pago)
                             </button>
                         </form>
                     {% endif %}
                 </div>
 
-                <!-- Botão editar no canto direito, só enquanto aguardando conferência -->
-                {% if d.status == 'aguardando_conferencia' and (session['user_id'] == d.vendedor_id or session['perfil'] == 'gerente') %}
+                <!-- Botão editar no canto direito, só enquanto aguardando validação -->
+                {% if d.status == 'aguardando_validacao' and (session['user_id'] == d.vendedor_id or session['perfil'] == 'gerente') %}
                     <a href="{{ url_for('editar_devolucao', id=d.id) }}"
                        style="padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: bold; text-decoration: none; background: #7f8c8d; color: white;">
                         ✏️ Editar

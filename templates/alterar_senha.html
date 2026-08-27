@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="card shadow">
+            <div class="card-body">
+                <h3 class="card-title text-center mb-4">Alterar Senha Obrigatória</h3>
+                <p class="text-muted text-center">Por segurança, como este é o seu primeiro acesso, por favor defina uma nova senha pessoal.</p>
+                
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="nova_senha" class="form-label">Nova Senha</label>
+                        <input type="password" class="form-control" id="nova_senha" name="nova_senha" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="confirma_senha" class="form-label">Confirme a Nova Senha</label>
+                        <input type="password" class="form-control" id="confirma_senha" name="confirma_senha" required>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Salvar Nova Senha</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

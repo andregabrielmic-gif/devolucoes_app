@@ -1,26 +1,106 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Nova Devolução</h2>
-<form method="POST" enctype="multipart/form-data">
-    <label>Cliente:</label><br>
-    <input type="text" name="cliente" required><br>
-    
-    <label>NF do Cliente:</label><br>
-    <input type="text" name="nf_cliente" required><br>
-    
-    <label>Nossa NF:</label><br>
-    <input type="text" name="nf_interna" required><br>
-    
-    <label>Valor Total da NF:</label><br>
-    <input type="number" step="0.01" name="valor" required><br>
-    
-    <label>Motivo:</label><br>
-    <textarea name="motivo"></textarea><br>
-    
-    <label>Anexar PDFs das Notas (pode selecionar vários):</label><br>
-    <input type="file" name="pdf_notas" multiple accept="application/pdf"><br>
-    <small style="color: #666;">Segure Ctrl (ou Cmd no Mac) para selecionar múltiplos arquivos</small><br><br>
-    
-    <button type="submit">Cadastrar Devolução</button>
-</form>
+<div class="card" style="max-width: 600px; margin: 20px auto; padding: 20px;">
+    <h2>Nova Devolução</h2>
+    <hr>
+    <form method="POST" enctype="multipart/form-data" id="form-devolucao">
+        <label>Cliente:</label><br>
+        <input type="text" name="cliente" required class="form-control mb-2"><br>
+        
+        <label>NF do Cliente:</label><br>
+        <input type="text" name="nf_cliente" required class="form-control mb-2"><br>
+        
+        <label>Nossa NF:</label><br>
+        <input type="text" name="nf_interna" required class="form-control mb-2"><br>
+        
+        <label>Valor Total da NF:</label><br>
+        <input type="number" step="0.01" name="valor" required class="form-control mb-2"><br>
+        
+        <label>Motivo:</label><br>
+        <textarea name="motivo" class="form-control mb-2"></textarea><br>
+        
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px;">
+            <label><b>Adicionar Notas Fiscais (PDF):</b></label><br>
+            <div style="display: flex; gap: 10px; margin-top: 5px;">
+                <!-- Input invisível ou separado para selecionar de qualquer pasta -->
+                <input type="file" id="input-arquivo" accept="application/pdf" style="display: none;" onchange="adicionarArquivo(this)">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('input-arquivo').click()">📁 Selecionar Nota PDF</button>
+            </div>
+            
+            <p style="margin: 10px 0 5px 0; font-size: 13px; color: #666;">Notas selecionadas para envio:</p>
+            <ul id="lista-arquivos" style="list-style: none; padding: 0; margin: 0;">
+                <li id="nenhum-arquivo" style="color: #999; font-style: italic; font-size: 13px;">Nenhuma nota adicionada ainda.</li>
+            </ul>
+            <!-- Input real que será enviado para o Flask -->
+            <input type="file" name="pdf_notas" id="pdf_notas_real" style="display: none;" multiple>
+        </div>
+        
+        <button type="submit" class="btn btn-success">Cadastrar Devolução</button>
+    </form>
+</div>
+
+<script>
+    // Usamos DataTransfer para acumular os arquivos de pastas diferentes
+    let dtGlobal = new DataTransfer();
+
+    function adicionarArquivo(input) {
+        if (input.files.length > 0) {
+            let file = input.files[0];
+            
+            // Adiciona no acumulador global
+            dtGlobal.items.add(file);
+            
+            // Atualiza o input real do formulário
+            document.getElementById('pdf_notas_real').files = dtGlobal.files;
+            
+            // Atualiza a listagem visual na tela
+            atualizarListaVisual();
+        }
+        // Reseta o input para permitir escolher o mesmo arquivo de novo se precisar
+        input.value = '';
+    }
+
+    function removerArquivo(index) {
+        let dtNova = new DataTransfer();
+        
+        // Recria a lista pulando o índice que o usuário mandou excluir
+        for (let i = 0; i < dtGlobal.files.length; i++) {
+            if (i !== index) {
+                dtNova.items.add(dtGlobal.files[i]);
+            }
+        }
+        
+        dtGlobal = dtNova;
+        document.getElementById('pdf_notas_real').files = dtGlobal.files;
+        atualizarListaVisual();
+    }
+
+    function atualizarListaVisual() {
+        let lista = document.getElementById('lista-arquivos');
+        lista.innerHTML = '';
+
+        if (dtGlobal.files.length === 0) {
+            lista.innerHTML = '<li id="nenhum-arquivo" style="color: #999; font-style: italic; font-size: 13px;">Nenhuma nota adicionada ainda.</li>';
+            return;
+        }
+
+        for (let i = 0; i < dtGlobal.files.length; i++) {
+            let li = document.createElement('li');
+            li.style.display = 'flex';
+            li.style.justify0content = 'space-between';
+            li.style.alignItems = 'center';
+            li.style.background = '#fff';
+            li.style.padding = '6px 10px';
+            li.style.marginBottom = '5px';
+            li.style.borderRadius = '4px';
+            li.style.border = '1px solid #ccc';
+            
+            li.innerHTML = `
+                <span style="font-size: 13px;">📄 ${dtGlobal.files[i].name}</span>
+                <button type="button" class="btn btn-danger btn-sm" style="padding: 2px 8px; font-size: 12px; background: #c0392b; color: #fff; border: none; border-radius: 3px; cursor: pointer;" onclick="removerArquivo(${i})">Excluir</button>
+            `;
+            lista.appendChild(li);
+        }
+    }
+</script>
 {% endblock %}

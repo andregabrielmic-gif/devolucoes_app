@@ -9,7 +9,8 @@ class Usuario(db.Model):
     nome = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     senha_hash = db.Column(db.String(200), nullable=False)
-    perfil = db.Column(db.String(50), nullable=False) 
+    perfil = db.Column(db.String(50), nullable=False)
+    primeiro_login = db.Column(db.Boolean, default=True)
 
     def set_senha(self, senha):
         self.senha_hash = generate_password_hash(senha)
@@ -24,13 +25,15 @@ class Devolucao(db.Model):
     nf_interna = db.Column(db.String(100))
     valor = db.Column(db.Float)
     motivo = db.Column(db.Text)
-    status = db.Column(db.String(50), default="aguardando_conferencia")
+    status = db.Column(db.String(50), default="aguardando_validacao")
     pdf_nota = db.Column(db.String(200))
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
     vendedor_id = db.Column(db.Integer, db.ForeignKey('usuario.id'))
     vendedor = db.relationship('Usuario', foreign_keys=[vendedor_id])
 
     # Auditoria de Processo
+    validado_por = db.Column(db.String(100))         
+    data_validacao = db.Column(db.DateTime)       
     conferido_por = db.Column(db.String(100))
     data_conferencia = db.Column(db.DateTime)
     aprovado_por = db.Column(db.String(100))

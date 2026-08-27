@@ -64,9 +64,38 @@ def login():
         user = Usuario.query.filter_by(email=request.form['email']).first()
         if user and user.check_senha(request.form['senha']):
             session.update({'user_id': user.id, 'perfil': user.perfil, 'nome': user.nome})
+            
+            if user.primeiro_login:
+                return redirect(url_for('alterar_senha_obrigatoria'))
+                
             return redirect(url_for('dashboard'))
         flash("Email ou senha inválidos.")
     return render_template('login.html')
+
+@app.route('/alterar_senha', methods=['GET', 'POST'])
+@login_required
+def alterar_senha_obrigatoria():
+    user = Usuario.query.get(session['user_id'])
+    if request.method == 'POST':
+        nova_senha = request.form.get('nova_senha')
+        confirma_senha = request.form.get('confirma_senha')
+        
+        if not nova_senha or nova_senha != confirma_senha:
+            flash("As senhas não coincidem ou estão vazias.")
+            return render_template('alterar_senha.html')
+            
+        if nova_senha == "Mic@2026":
+            flash("A nova senha não pode ser igual à senha padrão.")
+            return render_template('alterar_senha.html')
+            
+        user.set_senha(nova_senha)
+        user.primeiro_login = False # Desativa o bloqueio de primeiro login
+        db.session.commit()
+        
+        flash("Senha alterada com sucesso!")
+        return redirect(url_for('dashboard'))
+        
+    return render_template('alterar_senha.html')
 
 @app.route('/logout')
 def logout():
@@ -94,14 +123,14 @@ def dashboard():
     if status_filtro:
         query = query.filter(Devolucao.status == status_filtro)
 
-    # Ordena: pendentes primeiro, depois por data mais recente
+    # Ordena com base no novo fluxo
     from sqlalchemy import case
     ordem_status = case(
-        (Devolucao.status == 'aguardando_conferencia', 1),
+        (Devolucao.status == 'aguardando_validacao', 1),
         (Devolucao.status == 'aguardando_aprovacao', 2),
         (Devolucao.status == 'em_transito', 3),
         (Devolucao.status == 'aguardando_fiscal', 4),
-        (Devolucao.status == 'entregue_fiscal', 5),
+        (Devolucao.status == 'entregue_financeiro', 5),
         (Devolucao.status == 'finalizado_pago', 6),
         else_=6
     )
@@ -112,7 +141,7 @@ def dashboard():
 # --- FLUXO DE DEVOLUÇÃO ---
 @app.route('/nova', methods=['GET', 'POST'])
 @login_required
-@roles_required('vendedor', 'conferente', 'gerente')
+@roles_required('vendedor', 'gerente')
 def nova_devolucao():
     if request.method == 'POST':
         nova = Devolucao(
@@ -121,7 +150,8 @@ def nova_devolucao():
             nf_interna=request.form['nf_interna'], 
             valor=float(request.form['valor']),
             motivo=request.form['motivo'], 
-            vendedor_id=session['user_id']
+            vendedor_id=session['user_id'],
+            status="aguardando_validacao"
         )
         db.session.add(nova)
         db.session.flush()
@@ -145,27 +175,47 @@ def nova_devolucao():
     
     return render_template('nova_devolucao.html')
 
-@app.route('/conferir_nota/<int:id>')
-@roles_required('conferente', 'gerente')
-def conferir_nota(id):
+@app.route('/validar_nota/<int:id>')
+@login_required
+@roles_required('fiscal', 'gerente')
+def validar_nota(id):
     d = Devolucao.query.get_or_404(id)
-    d.status, d.conferido_por, d.data_conferencia = "aguardando_aprovacao", session['nome'], agora_brasilia()
-    db.session.commit(); return redirect(url_for('dashboard'))
+    d.status = "aguardando_aprovacao"
+    d.validado_por = session['nome']          
+    d.data_validacao = agora_brasilia()       
+    db.session.commit()
+    return redirect(url_for('dashboard'))
 
 @app.route('/aprovar_envio/<int:id>')
+@login_required
 @roles_required('gerente')
 def aprovar_envio(id):
     d = Devolucao.query.get_or_404(id)
-    d.status, d.aprovado_por, d.data_aprovacao = "em_transito", session['nome'], agora_brasilia()
-    db.session.commit(); return redirect(url_for('dashboard'))
+    d.status = "em_transito"
+    d.aprovado_por = session['nome']
+    d.data_aprovacao = agora_brasilia()
+    db.session.commit()
+    return redirect(url_for('dashboard'))
 
 @app.route('/receber_mercadoria/<int:id>')
-@roles_required('vendedor', 'conferente', 'gerente')
+@login_required
+@roles_required('vendedor', 'gerente')
 def receber_mercadoria(id):
     d = Devolucao.query.get_or_404(id)
     d.status = "aguardando_fiscal"
     d.recebido_por = session['nome']
     d.data_recebimento = agora_brasilia()
+    db.session.commit()
+    return redirect(url_for('dashboard'))
+
+@app.route('/dar_entrada_fiscal/<int:id>')
+@login_required
+@roles_required('fiscal', 'gerente')
+def dar_entrada_fiscal(id):
+    d = Devolucao.query.get_or_404(id)
+    d.status = "entregue_financeiro"
+    d.entrada_fiscal_por = session['nome']
+    d.data_entrada_fiscal = agora_brasilia()
     db.session.commit()
     return redirect(url_for('dashboard'))
 
@@ -181,19 +231,17 @@ def baixar_boleto(id):
     db.session.commit()
     return redirect(url_for('dashboard'))
 
-
 @app.route('/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
-@roles_required('vendedor', 'conferente', 'gerente')
+@roles_required('vendedor', 'gerente')
 def editar_devolucao(id):
     d = Devolucao.query.get_or_404(id)
 
-    # Só quem criou pode editar, e só se ainda estiver aguardando validação
     if d.vendedor_id != session['user_id'] and session['perfil'] not in ['gerente']:
         flash("Você não tem permissão para editar esta devolução.")
         return redirect(url_for('dashboard'))
 
-    if d.status != 'aguardando_conferencia':
+    if d.status != 'aguardando_validacao':
         flash("Esta devolução não pode mais ser editada pois já passou da etapa de validação.")
         return redirect(url_for('dashboard'))
 
@@ -204,7 +252,6 @@ def editar_devolucao(id):
         d.valor = float(request.form['valor'])
         d.motivo = request.form['motivo']
 
-        # Remover PDFs marcados
         ids_remover = request.form.getlist('remover_pdf')
         for pdf_id in ids_remover:
             pdf = DevolucaoPDF.query.get(int(pdf_id))
@@ -215,7 +262,6 @@ def editar_devolucao(id):
                     pass
                 db.session.delete(pdf)
 
-        # Adicionar novos PDFs
         arquivos = request.files.getlist('pdf_notas')
         for arquivo in arquivos:
             if arquivo and arquivo.filename != '':
@@ -231,25 +277,15 @@ def editar_devolucao(id):
 
     return render_template('editar_devolucao.html', d=d)
 
-
-@app.route('/dar_entrada_fiscal/<int:id>')
-@login_required
-@roles_required('fiscal', 'gerente')
-def dar_entrada_fiscal(id):
-    d = Devolucao.query.get_or_404(id)
-    d.status = "entregue_fiscal"
-    d.entrada_fiscal_por = session['nome']
-    d.data_entrada_fiscal = agora_brasilia()
-    db.session.commit()
-    return redirect(url_for('dashboard'))
-
 # --- USUÁRIOS ---
 @app.route('/usuarios')
+@login_required
 @roles_required('gerente')
 def listar_usuarios():
     return render_template('usuario.html', usuarios=Usuario.query.all())
 
 @app.route('/usuarios/novo', methods=['GET', 'POST'])
+@login_required
 @roles_required('gerente')
 def novo_usuario():
     if request.method == 'POST':
@@ -260,6 +296,7 @@ def novo_usuario():
     return render_template('novo_usuario.html')
 
 @app.route('/usuarios/editar/<int:id>', methods=['GET', 'POST'])
+@login_required
 @roles_required('gerente')
 def editar_usuario(id):
     u = Usuario.query.get_or_404(id)
@@ -280,8 +317,8 @@ def relatorio():
         
         if data_inicio and data_fim:
             return redirect(url_for('gerar_relatorio_pdf', 
-                                  data_inicio=data_inicio, 
-                                  data_fim=data_fim))
+                                    data_inicio=data_inicio, 
+                                    data_fim=data_fim))
     
     return render_template('relatorio.html')
 
@@ -323,7 +360,6 @@ def gerar_relatorio_pdf():
         alignment=1
     )
 
-    # Estilo para células com quebra de linha automática
     cell_style = ParagraphStyle(
         'CellStyle',
         parent=styles['Normal'],
@@ -345,7 +381,6 @@ def gerar_relatorio_pdf():
     elements.append(Paragraph(f"<b>Total de registros:</b> {len(devolucoes)}", styles['Normal']))
     elements.append(Spacer(1, 20))
     
-    # Cabeçalho
     data = [[
         Paragraph('<b>Data Entrada</b>', cell_style_center),
         Paragraph('<b>Cliente</b>', cell_style_center),
@@ -358,7 +393,6 @@ def gerar_relatorio_pdf():
     
     for d in devolucoes:
         vendedor_nome = d.vendedor.nome if d.vendedor else '-'
-        # Quebra as NFs em linhas separadas quando há múltiplos valores
         nf_cliente = (d.nf_cliente or '-').replace(' / ', '\n')
         nf_interna = (d.nf_interna or '-').replace(' / ', '\n')
         data.append([
@@ -418,9 +452,9 @@ def gerar_relatorio_pdf():
     nome_arquivo = f"relatorio_devolucoes_{data_inicio_str}_a_{data_fim_str}.pdf"
     
     return send_file(buffer, 
-                     download_name=nome_arquivo,
-                     as_attachment=True,
-                     mimetype='application/pdf')
+                    download_name=nome_arquivo,
+                    as_attachment=True,
+                    mimetype='application/pdf')
 
 # --- Bloco de Auto-Setup ---
 def inicializar_usuarios():
@@ -428,7 +462,7 @@ def inicializar_usuarios():
         {"nome": "André", "email": "andre.oliveira@mic.ind.br", "perfil": "gerente"},
         {"nome": "Eloah", "email": "eloah@mic.ind.br", "perfil": "gerente"},
         {"nome": "Andrea Financeiro", "email": "andrea.santos@mic.ind.br", "perfil": "financeiro"},
-        {"nome": "Marinete", "email": "marinete.goncalves@mic.ind.br", "perfil": "conferente"},
+        {"nome": "Marinete", "email": "marinete.goncalves@mic.ind.br", "perfil": "vendedor"},
         {"nome": "Renata", "email": "renata.caetano@mic.ind.br", "perfil": "vendedor"},
         {"nome": "Luan", "email": "luan.costa@mic.ind.br", "perfil": "vendedor"},
         {"nome": "Talita", "email": "talita.stevanelli@mic.ind.br", "perfil": "vendedor"},
@@ -442,13 +476,17 @@ def inicializar_usuarios():
         db.create_all()
         
         for dado in usuarios_fixos:
-            if not Usuario.query.filter_by(email=dado["email"]).first():
-                novo_u = Usuario(nome=dado["nome"], email=dado["email"], perfil=dado["perfil"])
-                novo_u.set_senha("Mic@2026")
+            usuario_existente = Usuario.query.filter_by(email=dado["email"]).first()
+            if not usuario_existente:
+                novo_u = Usuario(nome=dado["nome"], email=dado["email"], perfil=dado["perfil"], primeiro_login=True)
+                novo_u.set_senha("Mic@2026") # Senha padrão inicial
                 db.session.add(novo_u)
+            else:
+                if dado["email"] == "marinete.goncalves@mic.ind.br" and usuario_existente.perfil != "vendedor":
+                    usuario_existente.perfil = "vendedor"
         
         db.session.commit()
-        print(">>> Sistema MIC: Usuários verificados/criados com sucesso!")
+        print(">>> Sistema MIC: Usuários verificados com sucesso!")
 
 # --- Inicialização do Servidor ---
 if __name__ == "__main__":
