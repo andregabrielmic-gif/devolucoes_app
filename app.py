@@ -279,6 +279,50 @@ def editar_devolucao(id):
 
     return render_template('editar_devolucao.html', d=d)
 
+# --- RETORNO DE ETAPA ---
+STATUS_ANTERIOR = {
+    "aguardando_aprovacao": "aguardando_validacao",   # gerente devolve pro fiscal
+    "em_transito": "aguardando_aprovacao",             # vendedor/gerente devolve pro gerente
+    "aguardando_fiscal": "em_transito",                # fiscal devolve pro vendedor
+    "entregue_financeiro": "aguardando_fiscal",        # financeiro devolve pro fiscal
+    "finalizado_pago": "entregue_financeiro",          # financeiro desfaz baixa
+}
+
+PERFIS_RETORNO = {
+    "aguardando_aprovacao": ["gerente"],
+    "em_transito": ["vendedor", "gerente"],
+    "aguardando_fiscal": ["fiscal", "gerente"],
+    "entregue_financeiro": ["financeiro", "gerente"],
+    "finalizado_pago": ["financeiro", "gerente"],
+}
+
+@app.route('/retornar/<int:id>', methods=['POST'])
+@login_required
+def retornar_devolucao(id):
+    d = Devolucao.query.get_or_404(id)
+    status_atual = d.status
+
+    perfis_ok = PERFIS_RETORNO.get(status_atual, [])
+    status_destino = STATUS_ANTERIOR.get(status_atual)
+
+    if not status_destino or session.get('perfil') not in perfis_ok:
+        flash("Você não tem permissão para retornar esta devolução.")
+        return redirect(url_for('dashboard'))
+
+    motivo = request.form.get('motivo_retorno', '').strip()
+    if not motivo:
+        flash("Informe o motivo do retorno.")
+        return redirect(url_for('dashboard'))
+
+    d.status = status_destino
+    d.retornado_por = session['nome']
+    d.data_retorno = agora_brasilia()
+    d.motivo_retorno = motivo
+
+    db.session.commit()
+    flash(f"Devolução retornada para a etapa anterior. Motivo: {motivo}")
+    return redirect(url_for('dashboard'))
+
 # --- USUÁRIOS ---
 @app.route('/usuarios')
 @login_required

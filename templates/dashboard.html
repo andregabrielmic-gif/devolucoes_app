@@ -134,6 +134,13 @@
                     {% if d.obs_baixa %}
                     <span style="color: #7f8c8d; grid-column: 1 / -1;">📝 <b>Obs. Financeiro:</b> {{ d.obs_baixa }}</span>
                     {% endif %}
+
+                    {% if d.motivo_retorno %}
+                    <span style="color: #c0392b; grid-column: 1 / -1; border-top: 1px dashed #eee; padding-top: 8px; margin-top: 4px;">
+                        ↩️ <b>Último retorno por {{ d.retornado_por }}:</b> {{ d.motivo_retorno }}
+                        <br><small>🕒 {{ d.data_retorno.strftime('%d/%m/%Y %H:%M') if d.data_retorno else '--' }}</small>
+                    </span>
+                    {% endif %}
                 </div>
             </div>
 
@@ -162,6 +169,21 @@
                             </button>
                         </form>
                     {% endif %}
+
+                    {% set retorno_map = {
+                        'aguardando_aprovacao': ('aguardando_validacao', ['gerente']),
+                        'em_transito': ('aguardando_aprovacao', ['vendedor', 'gerente']),
+                        'aguardando_fiscal': ('em_transito', ['fiscal', 'gerente']),
+                        'entregue_financeiro': ('aguardando_fiscal', ['financeiro', 'gerente']),
+                        'finalizado_pago': ('entregue_financeiro', ['financeiro', 'gerente']),
+                    } %}
+                    {% if d.status in retorno_map and session['perfil'] in retorno_map[d.status][1] %}
+                        <button type="button" class="btn"
+                                style="background: #c0392b; border-color: #a5281b; color: white;"
+                                onclick="document.getElementById('modal-retorno-{{ d.id }}').style.display='flex'">
+                            ↩️ Retornar Etapa
+                        </button>
+                    {% endif %}
                 </div>
 
                 <!-- Botão editar no canto direito, só enquanto aguardando validação -->
@@ -173,6 +195,33 @@
                 {% endif %}
 
             </div>
+
+            {% if d.status in retorno_map and session['perfil'] in retorno_map[d.status][1] %}
+            <!-- Modal: motivo do retorno -->
+            <div id="modal-retorno-{{ d.id }}" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:1000;">
+                <div style="background:#fff; padding:20px; border-radius:10px; width:90%; max-width:400px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+                    <h4 style="margin-top:0; color:#c0392b;">↩️ Retornar para etapa anterior</h4>
+                    <p style="font-size:13px; color:#7f8c8d; margin-top:-8px;">
+                        Devolução #{{ d.id }} — {{ d.cliente }}
+                    </p>
+                    <form method="POST" action="{{ url_for('retornar_devolucao', id=d.id) }}">
+                        <label style="font-size:13px; font-weight:bold;">Motivo do retorno:</label>
+                        <textarea name="motivo_retorno" required rows="3"
+                                style="width:100%; margin:8px 0; padding:8px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box; font-size:14px;"
+                                placeholder="Explique o motivo do retorno..."></textarea>
+                        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:10px;">
+                            <button type="button" class="btn" style="background:#bdc3c7; color:#fff;"
+                                    onclick="document.getElementById('modal-retorno-{{ d.id }}').style.display='none'">
+                                Cancelar
+                            </button>
+                            <button type="submit" class="btn" style="background:#c0392b; border-color:#a5281b; color:#fff;">
+                                Confirmar Retorno
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
         </div>
 
     {% endfor %}

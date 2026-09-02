@@ -45,6 +45,11 @@ class Devolucao(db.Model):
     entrada_fiscal_por = db.Column(db.String(100))
     data_entrada_fiscal = db.Column(db.DateTime)
     obs_baixa = db.Column(db.Text)
+    
+        # Retorno de etapa
+    retornado_por = db.Column(db.String(100))
+    data_retorno = db.Column(db.DateTime)
+    motivo_retorno = db.Column(db.Text)
 
 class DevolucaoPDF(db.Model):
     id = db.Column(db.Integer, primary_key=True)
