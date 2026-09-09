@@ -187,12 +187,25 @@
                 </div>
 
                 <!-- Botão editar no canto direito, só enquanto aguardando validação -->
-                {% if d.status == 'aguardando_validacao' and (session['user_id'] == d.vendedor_id or session['perfil'] == 'gerente') %}
-                    <a href="{{ url_for('editar_devolucao', id=d.id) }}"
-                       style="padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: bold; text-decoration: none; background: #7f8c8d; color: white;">
-                        ✏️ Editar
-                    </a>
-                {% endif %}
+                <div style="display: flex; gap: 8px;">
+                    {% if d.status == 'aguardando_validacao' and (session['user_id'] == d.vendedor_id or session['perfil'] == 'gerente') %}
+                        <a href="{{ url_for('editar_devolucao', id=d.id) }}"
+                           style="padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: bold; text-decoration: none; background: #7f8c8d; color: white;">
+                            ✏️ Editar
+                        </a>
+                    {% endif %}
+
+                    {% if session['perfil'] == 'gerente' %}
+                        <form method="POST" action="{{ url_for('excluir_devolucao', id=d.id) }}"
+                              onsubmit="return confirm('Tem certeza que deseja EXCLUIR a devolução de {{ d.cliente }}? Essa ação não pode ser desfeita.');"
+                              style="margin: 0;">
+                            <button type="submit"
+                                    style="padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: bold; border: none; cursor: pointer; background: #c0392b; color: white;">
+                                🗑️ Excluir
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
 
             </div>
 
@@ -207,8 +220,8 @@
                     <form method="POST" action="{{ url_for('retornar_devolucao', id=d.id) }}">
                         <label style="font-size:13px; font-weight:bold;">Motivo do retorno:</label>
                         <textarea name="motivo_retorno" required rows="3"
-                                style="width:100%; margin:8px 0; padding:8px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box; font-size:14px;"
-                                placeholder="Explique o motivo do retorno..."></textarea>
+                                  style="width:100%; margin:8px 0; padding:8px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box; font-size:14px;"
+                                  placeholder="Explique o motivo do retorno..."></textarea>
                         <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:10px;">
                             <button type="button" class="btn" style="background:#bdc3c7; color:#fff;"
                                     onclick="document.getElementById('modal-retorno-{{ d.id }}').style.display='none'">

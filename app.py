@@ -323,6 +323,29 @@ def retornar_devolucao(id):
     flash(f"Devolução retornada para a etapa anterior. Motivo: {motivo}")
     return redirect(url_for('dashboard'))
 
+@app.route('/excluir/<int:id>', methods=['POST'])
+@login_required
+def excluir_devolucao(id):
+    if session.get('perfil') != 'gerente':
+        flash("Apenas a gerência pode excluir devoluções.")
+        return redirect(url_for('dashboard'))
+
+    d = Devolucao.query.get_or_404(id)
+
+    # remove os PDFs anexados (registro no banco + arquivo físico)
+    for pdf in d.pdfs:
+        caminho = os.path.join(app.config['UPLOAD_FOLDER'], pdf.nome_arquivo)
+        if os.path.exists(caminho):
+            os.remove(caminho)
+        db.session.delete(pdf)
+
+    cliente = d.cliente
+    db.session.delete(d)
+    db.session.commit()
+
+    flash(f"Devolução de '{cliente}' excluída com sucesso.")
+    return redirect(url_for('dashboard'))
+
 # --- USUÁRIOS ---
 @app.route('/usuarios')
 @login_required
